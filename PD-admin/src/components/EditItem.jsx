@@ -1,25 +1,46 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Upload } from 'lucide-react'
+
+import { updateItem, getCategories } from '../services/api'
 
 const EditItem = ({ item, onClose, onUpdate }) => {
 
+    const [categories, setCategories] = useState([])
+    const [categoriesError, setCategoriesError] = useState('')
+
     const [form, setForm] = useState({
         name: item.name || '',
-        category: item.category || 'Furniture',
-        subCategory: item.subCategory || '',
+        categoryId: item.category_id || '',
+        subCategory: item.sub_category || '',
         brand: item.brand || '',
         price: item.price || '',
-        lowStockThreshold: item.lowStockThreshold || ''
+        lowStockThreshold: item.low_stock_threshold || ''
     })
 
-    const [image, setImage] = useState(item.image || '')
+    const [image, setImage] = useState(item.image_url || '')
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
 
-    const categories = [
-        'King Koil',
-        'Furniture',
-        'Clothing',
-        'Mattresses'
-    ]
+    useEffect(() => {
+
+        const fetchCategories = async () => {
+
+            try {
+
+                const data = await getCategories()
+
+                setCategories(data)
+
+            } catch (err) {
+
+                console.error(err)
+                setCategoriesError('Could not load categories.')
+            }
+        }
+
+        fetchCategories()
+
+    }, [])
 
     const handleChange = (e) => {
 
@@ -40,23 +61,43 @@ const EditItem = ({ item, onClose, onUpdate }) => {
         setImage(URL.createObjectURL(file))
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
 
         e.preventDefault()
 
-        if (!form.name || !form.category || !form.price) {
+        setError('')
+
+        if (!form.name.trim() || !form.categoryId || !form.price) {
+            setError('Please fill in all required fields.')
             return
         }
 
-        onUpdate({
-            ...item,
-            ...form,
-            price: Number(form.price),
-            lowStockThreshold: Number(
-                form.lowStockThreshold || 0
-            ),
-            image
-        })
+        setSubmitting(true)
+
+        try {
+
+            await updateItem(item.id, {
+                name: form.name.trim(),
+                categoryId: Number(form.categoryId),
+                subCategory: form.subCategory.trim(),
+                brand: form.brand.trim(),
+                price: Number(form.price),
+                stock: item.stock,  // stock is managed separately, keep as-is
+                lowStockThreshold: Number(form.lowStockThreshold || 0),
+                imageUrl: image
+            })
+
+            onUpdate()
+
+        } catch (err) {
+
+            console.error(err)
+            setError(err.message || 'Failed to update item.')
+
+        } finally {
+
+            setSubmitting(false)
+        }
     }
 
     return (
@@ -277,8 +318,8 @@ const EditItem = ({ item, onClose, onUpdate }) => {
                             </label>
 
                             <select
-                                name='category'
-                                value={form.category}
+                                name='categoryId'
+                                value={form.categoryId}
                                 onChange={handleChange}
                                 className='
                                     w-full
@@ -293,18 +334,34 @@ const EditItem = ({ item, onClose, onUpdate }) => {
                                 '
                             >
 
+                                <option value=''>
+                                    Select category
+                                </option>
+
                                 {categories.map((category) => (
 
                                     <option
-                                        key={category}
-                                        value={category}
+                                        key={category.id}
+                                        value={category.id}
                                     >
-                                        {category}
+                                        {category.name}
                                     </option>
 
                                 ))}
 
                             </select>
+
+                            {categoriesError && (
+
+                                <p className='
+                                    text-xs
+                                    text-black
+                                    mt-2
+                                '>
+                                    {categoriesError}
+                                </p>
+
+                            )}
 
                         </div>
 
@@ -482,6 +539,19 @@ const EditItem = ({ item, onClose, onUpdate }) => {
                     </div>
 
 
+                    {error && (
+
+                        <p className='
+                            text-xs
+                            text-black
+                            mb-4
+                        '>
+                            {error}
+                        </p>
+
+                    )}
+
+
                     {/* Actions */}
                     <div className='
                         flex
@@ -514,6 +584,7 @@ const EditItem = ({ item, onClose, onUpdate }) => {
 
                         <button
                             type='submit'
+                            disabled={submitting}
                             className='
                                 bg-black
                                 text-white
@@ -522,9 +593,10 @@ const EditItem = ({ item, onClose, onUpdate }) => {
                                 text-sm
                                 hover:bg-gray-800
                                 transition
+                                disabled:opacity-50
                             '
                         >
-                            Save Changes
+                            {submitting ? 'Saving...' : 'Save Changes'}
                         </button>
 
                     </div>

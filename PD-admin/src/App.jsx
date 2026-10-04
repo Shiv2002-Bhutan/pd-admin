@@ -1,81 +1,140 @@
 import React, { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
+import ArchiveAlert from './components/ArchiveAlert'
 
 import Login from './pages/Login'
+import ChangePassword from './pages/ChangePassword'
 import Items from './pages/Items'
 import POS from './pages/POS'
 import Notification from './pages/Notification'
 import Analytics from './pages/Analytics'
+import Users from './pages/Users'
+import Reports from './pages/Reports'
 
-const AppLayout = ({ isOpen, setIsOpen }) => (
 
-    <div className='min-h-screen bg-white'>
+const AppLayout = ({ isOpen, setIsOpen }) => {
 
-        <Sidebar
-            isOpen={isOpen}
-            setIsOpen={setIsOpen}
-        />
+    const { user } = useAuth()
 
-        <div className='lg:ml-64 min-h-screen'>
+    if (user?.mustChangePassword) {
+        return <Navigate to="/change-password" replace />
+    }
 
-            <Topbar
+    return (
+        <div className="min-h-screen bg-white">
+
+            <Sidebar
+                isOpen={isOpen}
                 setIsOpen={setIsOpen}
             />
 
-            <main className='px-4 sm:px-6 lg:px-10 py-8'>
+            <div className="lg:ml-64 min-h-screen">
 
-                <Routes>
+                <Topbar
+                    setIsOpen={setIsOpen}
+                />
 
-                    <Route
-                        path='/'
-                        element={
-                            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                                <Items />
-                            </ProtectedRoute>
-                        }
-                    />
+                {/* Archive download alert */}
+                <ArchiveAlert />
 
-                    <Route
-                        path='/pos'
-                        element={
-                            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                                <POS />
-                            </ProtectedRoute>
-                        }
-                    />
+                <main className="px-4 sm:px-6 lg:px-10 py-8">
 
-                    <Route
-                        path='/notification'
-                        element={
-                            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                                <Notification />
-                            </ProtectedRoute>
-                        }
-                    />
+                    <Routes>
 
-                    <Route
-                        path='/analytics'
-                        element={
-                            <ProtectedRoute allowedRoles={['super_admin']}>
-                                <Analytics />
-                            </ProtectedRoute>
-                        }
-                    />
+                        {/* Default landing page */}
+                        <Route
+                            path="/"
+                            element={<Navigate to="/pos" replace />}
+                        />
 
-                </Routes>
+                        {/* POS */}
+                        <Route
+                            path="/pos"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={['admin', 'super_admin']}
+                                >
+                                    <POS />
+                                </ProtectedRoute>
+                            }
+                        />
 
-            </main>
+                        {/* Notifications */}
+                        <Route
+                            path="/notification"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={['admin', 'super_admin']}
+                                >
+                                    <Notification />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Items — Super Admin only */}
+                        <Route
+                            path="/items"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={['super_admin']}
+                                >
+                                    <Items />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Reports — Super Admin only */}
+                        <Route
+                            path="/reports"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={['super_admin']}
+                                >
+                                    <Reports />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Analytics — Super Admin only */}
+                        <Route
+                            path="/analytics"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={['super_admin']}
+                                >
+                                    <Analytics />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Users — Super Admin only */}
+                        <Route
+                            path="/users"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={['super_admin']}
+                                >
+                                    <Users />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                    </Routes>
+
+                </main>
+
+            </div>
 
         </div>
+    )
+}
 
-    </div>
-)
 
 const App = () => {
 
@@ -86,13 +145,21 @@ const App = () => {
 
             <Routes>
 
+                {/* Login */}
                 <Route
-                    path='/login'
+                    path="/login"
                     element={<Login />}
                 />
 
+                {/* Forced password change */}
                 <Route
-                    path='/*'
+                    path="/change-password"
+                    element={<ChangePassword forced />}
+                />
+
+                {/* Protected application */}
+                <Route
+                    path="/*"
                     element={
                         <AppLayout
                             isOpen={isOpen}

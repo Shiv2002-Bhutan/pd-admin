@@ -1,7 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import ProductList from '../components/pos/ProductList'
 import Receipt from '../components/pos/Receipt'
+import Toast from '../components/Toast'
+
+import { getItems, createSale } from '../services/api'
 
 const POS = () => {
 
@@ -9,36 +12,49 @@ const POS = () => {
 
     const [cart, setCart] = useState([])
 
-    const [error, setError] = useState('')
-    const [success, setSuccess] = useState('')
+    const [products, setProducts] = useState([])
+    const [loadingProducts, setLoadingProducts] = useState(true)
+    const [loadError, setLoadError] = useState('')
 
-    // TEMP mock products — replace with shared product source later
-    const [products] = useState([
-        {
-            id: 'item-001',
-            name: 'King Koil Natural',
-            price: 45000,
-            stock: 8
-        },
-        {
-            id: 'item-002',
-            name: 'Modern 3 Seater Sofa',
-            price: 65000,
-            stock: 5
-        },
-        {
-            id: 'item-003',
-            name: 'Premium Cotton Bedsheet',
-            price: 2500,
-            stock: 15
-        },
-        {
-            id: 'item-004',
-            name: 'Premium Comfort Mattress',
-            price: 28000,
-            stock: 3
+    const [submitting, setSubmitting] = useState(false)
+    const [error, setError] = useState('')
+
+    const [toast, setToast] = useState(null)
+
+    const fetchProducts = async () => {
+
+        setLoadingProducts(true)
+        setLoadError('')
+
+        try {
+
+            const data = await getItems()
+
+            const normalized = data.map((item) => ({
+                id: item.id,
+                name: item.name,
+                price: Number(item.price),
+                stock: item.stock
+            }))
+
+            setProducts(normalized)
+
+        } catch (err) {
+
+            console.error(err)
+            setLoadError('Could not load products. Try again.')
+
+        } finally {
+
+            setLoadingProducts(false)
         }
-    ])
+    }
+
+    useEffect(() => {
+
+        fetchProducts()
+
+    }, [])
 
     const filteredProducts = products.filter((product) => {
 
@@ -50,7 +66,6 @@ const POS = () => {
     const handleAddToCart = (product) => {
 
         setError('')
-        setSuccess('')
 
         setCart((previous) => {
 
@@ -135,28 +150,50 @@ const POS = () => {
         0
     )
 
-    const handleCompleteSale = () => {
+    const handleCompleteSale = async () => {
 
         setError('')
-        setSuccess('')
 
         if (cart.length === 0) {
             setError('Add at least one item.')
             return
         }
 
-        const sale = {
-            id: `sale-${Date.now()}`,
-            items: cart,
-            total,
-            createdAt: new Date().toISOString()
+        setSubmitting(true)
+
+        try {
+
+            const saleItems = cart.map((line) => ({
+                id: line.id,
+                name: line.name,
+                price: line.price,
+                quantity: line.qty
+            }))
+
+            await createSale(saleItems)
+
+            setCart([])
+
+            setToast({
+                type: 'success',
+                message: 'Sale recorded successfully.'
+            })
+
+            fetchProducts()
+
+        } catch (err) {
+
+            console.error(err)
+
+            setToast({
+                type: 'error',
+                message: err.message || 'Failed to record sale.'
+            })
+
+        } finally {
+
+            setSubmitting(false)
         }
-
-        // TEMP — replace with API call / shared sales store
-        console.log('Sale recorded:', sale)
-
-        setCart([])
-        setSuccess('Sale recorded successfully.')
     }
 
     return (
@@ -208,6 +245,30 @@ const POS = () => {
             </div>
 
 
+            {/* LOAD ERROR */}
+
+            {loadError && (
+
+                <div className="
+                    border
+                    border-gray-300
+                    px-5
+                    py-4
+                    mb-6
+                ">
+
+                    <p className="
+                        text-sm
+                        text-gray-700
+                    ">
+                        {loadError}
+                    </p>
+
+                </div>
+
+            )}
+
+
             {/* LAYOUT */}
 
             <div className="
@@ -218,12 +279,26 @@ const POS = () => {
                 items-start
             ">
 
-                <ProductList
-                    products={filteredProducts}
-                    search={search}
-                    setSearch={setSearch}
-                    onAddToCart={handleAddToCart}
-                />
+                {loadingProducts ? (
+
+                    <p className="
+                        text-sm
+                        text-gray-400
+                        py-10
+                    ">
+                        Loading products...
+                    </p>
+
+                ) : (
+
+                    <ProductList
+                        products={filteredProducts}
+                        search={search}
+                        setSearch={setSearch}
+                        onAddToCart={handleAddToCart}
+                    />
+
+                )}
 
                 <Receipt
                     cart={cart}
@@ -232,11 +307,22 @@ const POS = () => {
                     onRemove={handleRemove}
                     total={total}
                     error={error}
-                    success={success}
+                    submitting={submitting}
                     onCompleteSale={handleCompleteSale}
                 />
 
             </div>
+
+
+            {/* TOAST */}
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
 
         </div>
     )

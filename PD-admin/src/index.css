@@ -10,3 +10,18 @@ body {
     background: #f8f8f8;
     color: #111;
 }
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slide-up 0.2s ease-out;
+}

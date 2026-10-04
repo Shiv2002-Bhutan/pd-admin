@@ -6,7 +6,11 @@ import { useAuth } from '../context/AuthContext'
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
 
-    const { user } = useAuth()
+    const { user, loading } = useAuth()
+
+    if (loading) {
+        return null
+    }
 
     if (!user) {
         return <Navigate to="/login" replace />
@@ -17,18 +21,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (!allowed) {
 
         return (
-            <div className="
-                py-24
-                text-center
-            ">
+            <div className="py-24 text-center">
 
                 <ShieldAlert
                     size={28}
                     strokeWidth={1}
-                    className="
-                        mx-auto
-                        text-gray-400
-                    "
+                    className="mx-auto text-gray-400"
                 />
 
                 <p className="

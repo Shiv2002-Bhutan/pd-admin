@@ -1,0 +1,10 @@
+import express from 'express'
+import { getUsers, createUser } from '../controllers/usersController.js'
+import { authenticate, requireRole } from '../middleware/auth.js'
+
+const router = express.Router()
+
+router.get('/', authenticate, requireRole('super_admin'), getUsers)
+router.post('/', authenticate, requireRole('super_admin'), createUser)
+
+export default router

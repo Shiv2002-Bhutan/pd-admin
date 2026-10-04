@@ -1,26 +1,44 @@
-
 import React, { useState } from 'react'
 import { X, Package } from 'lucide-react'
+
+import { addStock } from '../services/api'
 
 const AddStock = ({ item, onClose, onAdd }) => {
 
     const [quantity, setQuantity] = useState('')
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
+
         e.preventDefault()
+
+        setError('')
 
         const amount = Number(quantity)
 
         if (!amount || amount <= 0) {
+            setError('Enter a quantity greater than 0.')
             return
         }
 
-        const updatedItem = {
-            ...item,
-            stock: item.stock + amount
-        }
+        setSubmitting(true)
 
-        onAdd(updatedItem)
+        try {
+
+            await addStock(item.id, amount)
+
+            onAdd()
+
+        } catch (err) {
+
+            console.error(err)
+            setError(err.message || 'Failed to add stock.')
+
+        } finally {
+
+            setSubmitting(false)
+        }
     }
 
     return (
@@ -144,10 +162,10 @@ const AddStock = ({ item, onClose, onAdd }) => {
                             flex-shrink-0
                         ">
 
-                            {item.image ? (
+                            {item.image_url ? (
 
                                 <img
-                                    src={item.image}
+                                    src={`${import.meta.env.VITE_API_URL}${item.image_url}`}
                                     alt={item.name}
                                     className="
                                         w-full
@@ -257,6 +275,19 @@ const AddStock = ({ item, onClose, onAdd }) => {
                     </div>
 
 
+                    {error && (
+
+                        <p className="
+                            text-xs
+                            text-black
+                            mb-4
+                        ">
+                            {error}
+                        </p>
+
+                    )}
+
+
                     {/* ACTIONS */}
 
                     <div className="
@@ -290,6 +321,7 @@ const AddStock = ({ item, onClose, onAdd }) => {
 
                         <button
                             type="submit"
+                            disabled={submitting}
                             className="
                                 bg-black
                                 text-white
@@ -298,9 +330,10 @@ const AddStock = ({ item, onClose, onAdd }) => {
                                 text-sm
                                 hover:bg-gray-800
                                 transition
+                                disabled:opacity-50
                             "
                         >
-                            Add Stock
+                            {submitting ? 'Adding...' : 'Add Stock'}
                         </button>
 
                     </div>
@@ -314,4 +347,3 @@ const AddStock = ({ item, onClose, onAdd }) => {
 }
 
 export default AddStock
-

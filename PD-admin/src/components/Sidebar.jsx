@@ -1,26 +1,49 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+
 import {
     Package,
     ShoppingCart,
     Bell,
     BarChart3,
+    Users as UsersIcon,
+    FileText,
     LogOut,
     X
 } from 'lucide-react'
 
 import { useAuth } from '../context/AuthContext'
+import { getLowStockItems } from '../services/api'
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
 
     const { user, logout } = useAuth()
 
+    const [lowStockCount, setLowStockCount] = useState(0)
+
+    useEffect(() => {
+
+        const fetchCount = async () => {
+
+            try {
+
+                const data = await getLowStockItems()
+
+                setLowStockCount(data.length)
+
+            } catch (err) {
+
+                console.error(err)
+
+            }
+
+        }
+
+        fetchCount()
+
+    }, [])
+
     const menuItems = [
-        {
-            name: 'Items',
-            path: '/',
-            icon: Package
-        },
         {
             name: 'POS',
             path: '/pos',
@@ -33,28 +56,51 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         }
     ]
 
-    // Analytics only added to the menu for super admins
+    // Super Admin only
     if (user?.role === 'super_admin') {
 
-        menuItems.push({
-            name: 'Analytics',
-            path: '/analytics',
-            icon: BarChart3
-        })
+        menuItems.push(
+
+            {
+                name: 'Items',
+                path: '/items',
+                icon: Package
+            },
+
+            {
+                name: 'Reports',
+                path: '/reports',
+                icon: FileText
+            },
+
+            {
+                name: 'Analytics',
+                path: '/analytics',
+                icon: BarChart3
+            },
+
+            {
+                name: 'Users',
+                path: '/users',
+                icon: UsersIcon
+            }
+
+        )
     }
 
     return (
         <>
+
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className='
+                    className="
                         fixed
                         inset-0
                         bg-black/20
                         z-40
                         lg:hidden
-                    '
+                    "
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -85,47 +131,57 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             >
 
                 {/* Brand */}
-                <div className='
-                    h-20
-                    px-6
-                    flex
-                    items-center
-                    justify-between
-                    border-b
-                    border-gray-100
-                '>
+                <div
+                    className="
+                        h-20
+                        px-6
+                        flex
+                        items-center
+                        justify-between
+                        border-b
+                        border-gray-100
+                    "
+                >
 
                     <div>
 
-                        <p className='
-                            text-xl
-                            font-semibold
-                            tracking-tight
-                            text-black
-                        '>
+                        <p
+                            className="
+                                text-xl
+                                font-semibold
+                                tracking-tight
+                                text-black
+                            "
+                        >
                             PD Furniture
                         </p>
 
-                        <div className='
-                            flex
-                            items-center
-                            gap-2
-                            mt-1
-                        '>
+                        <div
+                            className="
+                                flex
+                                items-center
+                                gap-2
+                                mt-1
+                            "
+                        >
 
-                            <p className='
-                                text-[10px]
-                                text-gray-500
-                                tracking-[0.15em]
-                            '>
+                            <p
+                                className="
+                                    text-[10px]
+                                    text-gray-500
+                                    tracking-[0.15em]
+                                "
+                            >
                                 ADMIN
                             </p>
 
-                            <span className='
-                                w-6
-                                h-[1px]
-                                bg-gray-400
-                            ' />
+                            <span
+                                className="
+                                    w-6
+                                    h-[1px]
+                                    bg-gray-400
+                                "
+                            />
 
                         </div>
 
@@ -134,12 +190,13 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     {/* Mobile Close */}
                     <button
                         onClick={() => setIsOpen(false)}
-                        className='
+                        className="
                             lg:hidden
                             text-gray-500
                             hover:text-black
                             transition
-                        '
+                        "
+                        aria-label="Close menu"
                     >
                         <X
                             size={19}
@@ -149,39 +206,43 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                 </div>
 
-
                 {/* Navigation */}
-                <nav className='flex-1 px-5 py-8'>
+                <nav className="flex-1 px-5 py-8">
 
                     {/* Section Heading */}
-                    <div className='mb-5'>
+                    <div className="mb-5">
 
-                        <div className='
-                            inline-flex
-                            items-center
-                            gap-2
-                        '>
+                        <div
+                            className="
+                                inline-flex
+                                items-center
+                                gap-2
+                            "
+                        >
 
-                            <p className='
-                                text-xs
-                                text-gray-500
-                            '>
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-500
+                                "
+                            >
                                 MENU
                             </p>
 
-                            <span className='
-                                w-6
-                                h-[1px]
-                                bg-gray-400
-                            ' />
+                            <span
+                                className="
+                                    w-6
+                                    h-[1px]
+                                    bg-gray-400
+                                "
+                            />
 
                         </div>
 
                     </div>
 
-
                     {/* Menu Items */}
-                    <div className='flex flex-col gap-1'>
+                    <div className="flex flex-col gap-1">
 
                         {menuItems.map((item) => {
 
@@ -238,15 +299,18 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                             </span>
 
                                             {/* Notification Count */}
-                                            {item.name === 'Notifications' && (
-                                                <span className='
-                                                    ml-auto
-                                                    text-[10px]
-                                                    text-gray-500
-                                                '>
-                                                    3
-                                                </span>
-                                            )}
+                                            {item.name === 'Notifications' &&
+                                                lowStockCount > 0 && (
+                                                    <span
+                                                        className="
+                                                            ml-auto
+                                                            text-[10px]
+                                                            text-gray-500
+                                                        "
+                                                    >
+                                                        {lowStockCount}
+                                                    </span>
+                                                )}
 
                                         </>
                                     )}
@@ -260,29 +324,34 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                 </nav>
 
-
                 {/* Bottom */}
-                <div className='
-                    border-t
-                    border-gray-100
-                    px-5
-                    py-5
-                '>
+                <div
+                    className="
+                        border-t
+                        border-gray-100
+                        px-5
+                        py-5
+                    "
+                >
 
-                    <div className='mb-5'>
+                    <div className="mb-5">
 
-                        <p className='
-                            text-sm
-                            text-gray-800
-                        '>
+                        <p
+                            className="
+                                text-sm
+                                text-gray-800
+                            "
+                        >
                             {user?.name || 'Admin'}
                         </p>
 
-                        <p className='
-                            text-xs
-                            text-gray-500
-                            mt-1
-                        '>
+                        <p
+                            className="
+                                text-xs
+                                text-gray-500
+                                mt-1
+                            "
+                        >
                             PD Furniture
                         </p>
 
@@ -290,7 +359,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                     <button
                         onClick={logout}
-                        className='
+                        className="
                             flex
                             items-center
                             gap-3
@@ -298,7 +367,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             text-gray-500
                             hover:text-black
                             transition
-                        '
+                        "
                     >
 
                         <LogOut
@@ -315,6 +384,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 </div>
 
             </aside>
+
         </>
     )
 }

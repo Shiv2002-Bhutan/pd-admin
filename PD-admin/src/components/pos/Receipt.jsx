@@ -8,7 +8,7 @@ const Receipt = ({
     onRemove,
     total,
     error,
-    success,
+    submitting,
     onCompleteSale
 }) => {
 
@@ -134,6 +134,9 @@ const Receipt = ({
                                         type="number"
                                         min="0"
                                         value={line.price}
+                                        onFocus={(event) =>
+                                            event.target.select()
+                                        }
                                         onChange={(event) =>
                                             onUpdatePrice(
                                                 line.id,
@@ -169,6 +172,9 @@ const Receipt = ({
                                         type="number"
                                         min="1"
                                         value={line.qty}
+                                        onFocus={(event) =>
+                                            event.target.select()
+                                        }
                                         onChange={(event) =>
                                             onUpdateQty(
                                                 line.id,
@@ -237,18 +243,14 @@ const Receipt = ({
             </div>
 
 
-            {/* FEEDBACK */}
+            {/* ERROR */}
 
-            {(error || success) && (
+            {error && (
 
                 <div className="px-5 pt-3">
 
-                    <p className={
-                        error
-                            ? 'text-xs text-black'
-                            : 'text-xs text-gray-500'
-                    }>
-                        {error || success}
+                    <p className="text-xs text-black">
+                        {error}
                     </p>
 
                 </div>
@@ -263,6 +265,7 @@ const Receipt = ({
                 <button
                     type="button"
                     onClick={onCompleteSale}
+                    disabled={submitting}
                     className="
                         w-full
                         bg-black
@@ -271,9 +274,10 @@ const Receipt = ({
                         text-sm
                         hover:bg-gray-800
                         transition
+                        disabled:opacity-50
                     "
                 >
-                    Complete Sale
+                    {submitting ? 'Recording Sale...' : 'Complete Sale'}
                 </button>
 
             </div>

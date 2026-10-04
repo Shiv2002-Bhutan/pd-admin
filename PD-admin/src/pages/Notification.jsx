@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { AlertTriangle, Package, RefreshCw } from 'lucide-react'
 
+import { getLowStockItems } from '../services/api'
+
 const Notification = () => {
 
     const [items, setItems] = useState([])
@@ -14,15 +16,7 @@ const Notification = () => {
 
         try {
 
-            const response = await fetch(
-                'http://localhost:5000/api/items/low-stock'
-            )
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch alerts.')
-            }
-
-            const data = await response.json()
+            const data = await getLowStockItems()
 
             setItems(data)
 

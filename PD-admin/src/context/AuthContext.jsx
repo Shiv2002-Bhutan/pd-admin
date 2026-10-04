@@ -1,47 +1,58 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+
+import { login as loginRequest } from '../services/api'
 
 const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
 
     const [user, setUser] = useState(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+
+        const storedUser = localStorage.getItem('user')
+
+        if (storedUser) {
+            setUser(JSON.parse(storedUser))
+        }
+
+        setLoading(false)
+
+    }, [])
 
     const login = async (username, password) => {
 
-        // TEMP mock — replace with:
-        // const response = await fetch('http://localhost:5000/api/auth/login', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ username, password })
-        // })
-        // const data = await response.json()
-        // if (!response.ok) throw new Error(data.message)
-        // localStorage.setItem('token', data.token)
-        // setUser(data.user)
+        const data = await loginRequest(username, password)
 
-        if (username === 'superadmin' && password === 'password') {
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
 
-            setUser({ name: 'Super Admin', role: 'super_admin' })
-            return
-        }
+        setUser(data.user)
+    }
 
-        if (username === 'admin' && password === 'password') {
+    const refreshUser = (updates) => {
 
-            setUser({ name: 'Admin', role: 'admin' })
-            return
-        }
+        setUser((previous) => {
 
-        throw new Error('Invalid credentials.')
+            const updated = { ...previous, ...updates }
+
+            localStorage.setItem('user', JSON.stringify(updated))
+
+            return updated
+        })
     }
 
     const logout = () => {
 
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+
         setUser(null)
-        // localStorage.removeItem('token')
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, refreshUser }}>
             {children}
         </AuthContext.Provider>
     )

@@ -1,4 +1,5 @@
-import React from 'react'
+
+import React, { useMemo, useState } from 'react'
 import { Search, Package, Plus } from 'lucide-react'
 
 const ProductList = ({
@@ -7,6 +8,35 @@ const ProductList = ({
     setSearch,
     onAddToCart
 }) => {
+
+    // Added Rubber Wood as a new category
+    const categories = [
+        'All',
+        'Furniture',
+        'Mattresses',
+        'Clothing',
+        'Rubber Wood'
+    ]
+
+    const [selectedCategory, setSelectedCategory] = useState('All')
+
+    // Filter products by category and search
+    const filteredProducts = useMemo(() => {
+        return products.filter((product) => {
+
+            const matchesCategory =
+                selectedCategory === 'All' ||
+                product.category?.toLowerCase() ===
+                    selectedCategory.toLowerCase()
+
+            const matchesSearch =
+                product.name
+                    ?.toLowerCase()
+                    .includes(search.toLowerCase())
+
+            return matchesCategory && matchesSearch
+        })
+    }, [products, search, selectedCategory])
 
     return (
         <div>
@@ -17,7 +47,7 @@ const ProductList = ({
                 relative
                 w-full
                 sm:max-w-md
-                mb-6
+                mb-4
             ">
 
                 <Search
@@ -55,6 +85,56 @@ const ProductList = ({
             </div>
 
 
+            {/* CATEGORY FILTER */}
+
+            <div className="
+                flex
+                flex-wrap
+                gap-2
+                mb-6
+            ">
+
+                {categories.map((category) => (
+
+                    <button
+                        key={category}
+                        type="button"
+                        onClick={() =>
+                            setSelectedCategory(category)
+                        }
+                        className={
+                            selectedCategory === category
+                                ? `
+                                    px-4
+                                    py-2
+                                    text-xs
+                                    border
+                                    border-black
+                                    bg-black
+                                    text-white
+                                    transition
+                                `
+                                : `
+                                    px-4
+                                    py-2
+                                    text-xs
+                                    border
+                                    border-gray-300
+                                    text-gray-600
+                                    hover:border-black
+                                    hover:text-black
+                                    transition
+                                `
+                        }
+                    >
+                        {category}
+                    </button>
+
+                ))}
+
+            </div>
+
+
             {/* LIST */}
 
             <div className="
@@ -62,7 +142,7 @@ const ProductList = ({
                 border-gray-200
             ">
 
-                {products.map((product) => {
+                {filteredProducts.map((product) => {
 
                     const outOfStock = product.stock <= 0
 
@@ -132,6 +212,16 @@ const ProductList = ({
                                             : `${product.stock} in stock`}
                                     </p>
 
+                                    {product.category && (
+                                        <p className="
+                                            text-xs
+                                            text-gray-400
+                                            mt-1
+                                        ">
+                                            {product.category}
+                                        </p>
+                                    )}
+
                                 </div>
 
                             </div>
@@ -162,7 +252,10 @@ const ProductList = ({
                     )
                 })}
 
-                {products.length === 0 && (
+
+                {/* NO PRODUCTS */}
+
+                {filteredProducts.length === 0 && (
 
                     <div className="
                         py-16

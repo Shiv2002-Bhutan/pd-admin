@@ -1,11 +1,20 @@
-import React, { useState } from 'react'
-import { X, Upload, Package } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, Upload } from 'lucide-react'
+
+import {
+    createItem,
+    getCategories,
+    uploadImage
+} from '../services/api'
 
 const AddItem = ({ onClose, onAdd }) => {
 
+    const [categories, setCategories] = useState([])
+    const [categoriesError, setCategoriesError] = useState('')
+
     const [form, setForm] = useState({
         name: '',
-        category: 'Furniture',
+        categoryId: '',
         subCategory: '',
         brand: '',
         price: '',
@@ -14,13 +23,79 @@ const AddItem = ({ onClose, onAdd }) => {
     })
 
     const [image, setImage] = useState('')
+    const [imageUrl, setImageUrl] = useState('')
+    const [uploadingImage, setUploadingImage] = useState(false)
+    const [imageError, setImageError] = useState('')
 
-    const categories = [
-        'King Koil',
-        'Furniture',
-        'Clothing',
-        'Mattresses'
-    ]
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+
+
+    // LOAD CATEGORIES
+    useEffect(() => {
+
+        const fetchCategories = async () => {
+
+            try {
+
+                const data = await getCategories()
+
+                /*
+                 * Rubber Wood should normally exist in the
+                 * categories table.
+                 *
+                 * If it already exists, use the real database
+                 * category exactly as returned by the API.
+                 */
+                const rubberWoodExists = data.some(
+                    (category) =>
+                        category.name?.trim().toLowerCase() ===
+                        'rubber wood'
+                )
+
+                /*
+                 * Only add a visual option if Rubber Wood
+                 * does not already exist.
+                 *
+                 * It has no fake ID because createItem()
+                 * requires a real database category ID.
+                 */
+                const updatedCategories = rubberWoodExists
+                    ? data
+                    : [
+                        ...data,
+                        {
+                            id: null,
+                            name: 'Rubber Wood'
+                        }
+                    ]
+
+                setCategories(updatedCategories)
+
+                if (data.length > 0) {
+
+                    setForm((prev) => ({
+                        ...prev,
+                        categoryId: data[0].id
+                    }))
+
+                }
+
+            } catch (err) {
+
+                console.error(err)
+
+                setCategoriesError(
+                    'Could not load categories.'
+                )
+
+            }
+        }
+
+        fetchCategories()
+
+    }, [])
+
 
     const handleChange = (e) => {
 
@@ -30,49 +105,124 @@ const AddItem = ({ onClose, onAdd }) => {
             ...prev,
             [name]: value
         }))
+
     }
 
-    const handleImage = (e) => {
+
+    const handleImage = async (e) => {
 
         const file = e.target.files?.[0]
 
         if (!file) return
 
-        const imageUrl = URL.createObjectURL(file)
+        setImageError('')
+        setUploadingImage(true)
 
-        setImage(imageUrl)
+        try {
+
+            const data = await uploadImage(file)
+
+            // Full URL for preview
+            setImage(
+                `${import.meta.env.VITE_API_URL}${data.url}`
+            )
+
+            // Relative path saved to database
+            setImageUrl(data.url)
+
+        } catch (err) {
+
+            console.error(err)
+
+            setImageError(
+                err.message ||
+                'Failed to upload image.'
+            )
+
+        } finally {
+
+            setUploadingImage(false)
+
+        }
     }
 
-    const handleSubmit = (e) => {
+
+    const handleSubmit = async (e) => {
 
         e.preventDefault()
 
+        setError('')
+
+
         if (
             !form.name.trim() ||
-            !form.category ||
-            !form.price ||
-            !form.stock
+            form.categoryId === '' ||
+            form.price === '' ||
+            form.stock === ''
         ) {
+
+            setError(
+                'Please fill in all required fields.'
+            )
+
             return
+
         }
 
-        const newItem = {
-            name: form.name.trim(),
-            category: form.category,
-            subCategory: form.subCategory.trim(),
-            brand: form.brand.trim(),
-            price: Number(form.price),
-            stock: Number(form.stock),
-            lowStockThreshold: Number(
-                form.lowStockThreshold || 0
-            ),
-            image
-        }
 
-        onAdd(newItem)
+        setSubmitting(true)
+
+        try {
+
+            await createItem({
+
+                name: form.name.trim(),
+
+                categoryId: Number(form.categoryId),
+
+                subCategory:
+                    form.subCategory.trim(),
+
+                brand:
+                    form.brand.trim(),
+
+                price:
+                    Number(form.price),
+
+                stock:
+                    Number(form.stock),
+
+                lowStockThreshold:
+                    Number(
+                        form.lowStockThreshold || 0
+                    ),
+
+                imageUrl:
+                    imageUrl
+
+            })
+
+            onAdd()
+
+        } catch (err) {
+
+            console.error(err)
+
+            setError(
+                err.message ||
+                'Failed to add item.'
+            )
+
+        } finally {
+
+            setSubmitting(false)
+
+        }
     }
 
+
     return (
+
         <div className='
             fixed
             inset-0
@@ -94,7 +244,8 @@ const AddItem = ({ onClose, onAdd }) => {
                 border-gray-200
             '>
 
-                {/* Header */}
+                {/* HEADER */}
+
                 <div className='
                     flex
                     items-center
@@ -126,7 +277,7 @@ const AddItem = ({ onClose, onAdd }) => {
                                 w-6
                                 h-[1px]
                                 bg-gray-400
-                            '/>
+                            ' />
 
                         </div>
 
@@ -140,6 +291,7 @@ const AddItem = ({ onClose, onAdd }) => {
 
                     </div>
 
+
                     <button
                         type='button'
                         onClick={onClose}
@@ -149,16 +301,19 @@ const AddItem = ({ onClose, onAdd }) => {
                             transition
                         '
                     >
+
                         <X
                             size={19}
                             strokeWidth={1.5}
                         />
+
                     </button>
 
                 </div>
 
 
-                {/* Form */}
+                {/* FORM */}
+
                 <form
                     onSubmit={handleSubmit}
                     className='
@@ -168,7 +323,8 @@ const AddItem = ({ onClose, onAdd }) => {
                     '
                 >
 
-                    {/* Image */}
+                    {/* IMAGE */}
+
                     <div className='mb-6'>
 
                         <p className='
@@ -178,6 +334,7 @@ const AddItem = ({ onClose, onAdd }) => {
                         '>
                             Product Image
                         </p>
+
 
                         <label className='
                             w-28
@@ -196,7 +353,16 @@ const AddItem = ({ onClose, onAdd }) => {
                             bg-gray-50
                         '>
 
-                            {image ? (
+                            {uploadingImage ? (
+
+                                <span className='
+                                    text-[10px]
+                                    text-gray-500
+                                '>
+                                    Uploading...
+                                </span>
+
+                            ) : image ? (
 
                                 <img
                                     src={image}
@@ -211,6 +377,7 @@ const AddItem = ({ onClose, onAdd }) => {
                             ) : (
 
                                 <>
+
                                     <Upload
                                         size={20}
                                         strokeWidth={1.5}
@@ -224,23 +391,40 @@ const AddItem = ({ onClose, onAdd }) => {
                                     '>
                                         Upload Image
                                     </span>
+
                                 </>
 
                             )}
+
 
                             <input
                                 type='file'
                                 accept='image/*'
                                 onChange={handleImage}
                                 className='hidden'
+                                disabled={uploadingImage}
                             />
 
                         </label>
 
+
+                        {imageError && (
+
+                            <p className='
+                                text-xs
+                                text-black
+                                mt-2
+                            '>
+                                {imageError}
+                            </p>
+
+                        )}
+
                     </div>
 
 
-                    {/* Product Name */}
+                    {/* PRODUCT NAME */}
+
                     <div className='mb-5'>
 
                         <label className='
@@ -273,7 +457,8 @@ const AddItem = ({ onClose, onAdd }) => {
                     </div>
 
 
-                    {/* Category + Subcategory */}
+                    {/* CATEGORY + SUBCATEGORY */}
+
                     <div className='
                         grid
                         grid-cols-1
@@ -281,6 +466,8 @@ const AddItem = ({ onClose, onAdd }) => {
                         gap-4
                         mb-5
                     '>
+
+                        {/* CATEGORY */}
 
                         <div>
 
@@ -293,9 +480,10 @@ const AddItem = ({ onClose, onAdd }) => {
                                 Category
                             </label>
 
+
                             <select
-                                name='category'
-                                value={form.category}
+                                name='categoryId'
+                                value={form.categoryId}
                                 onChange={handleChange}
                                 className='
                                     w-full
@@ -310,21 +498,53 @@ const AddItem = ({ onClose, onAdd }) => {
                                 '
                             >
 
+                                <option value=''>
+                                    Select category
+                                </option>
+
+
                                 {categories.map((category) => (
 
                                     <option
-                                        key={category}
-                                        value={category}
+                                        key={
+                                            category.id ??
+                                            'rubber-wood'
+                                        }
+                                        value={
+                                            category.id ?? ''
+                                        }
+                                        disabled={
+                                            category.id === null
+                                        }
                                     >
-                                        {category}
+                                        {category.name}
+                                        {category.id === null
+                                            ? ' (not configured)'
+                                            : ''
+                                        }
                                     </option>
 
                                 ))}
 
                             </select>
 
+
+                            {categoriesError && (
+
+                                <p className='
+                                    text-xs
+                                    text-black
+                                    mt-2
+                                '>
+                                    {categoriesError}
+                                </p>
+
+                            )}
+
                         </div>
 
+
+                        {/* SUBCATEGORY */}
 
                         <div>
 
@@ -336,6 +556,7 @@ const AddItem = ({ onClose, onAdd }) => {
                             '>
                                 Subcategory
                             </label>
+
 
                             <input
                                 type='text'
@@ -360,7 +581,8 @@ const AddItem = ({ onClose, onAdd }) => {
                     </div>
 
 
-                    {/* Brand */}
+                    {/* BRAND */}
+
                     <div className='mb-5'>
 
                         <label className='
@@ -371,6 +593,7 @@ const AddItem = ({ onClose, onAdd }) => {
                         '>
                             Brand
                         </label>
+
 
                         <input
                             type='text'
@@ -393,7 +616,8 @@ const AddItem = ({ onClose, onAdd }) => {
                     </div>
 
 
-                    {/* Price + Stock */}
+                    {/* PRICE + STOCK */}
+
                     <div className='
                         grid
                         grid-cols-1
@@ -412,6 +636,7 @@ const AddItem = ({ onClose, onAdd }) => {
                             '>
                                 Selling Price
                             </label>
+
 
                             <input
                                 type='number'
@@ -446,6 +671,7 @@ const AddItem = ({ onClose, onAdd }) => {
                                 Initial Stock
                             </label>
 
+
                             <input
                                 type='number'
                                 name='stock'
@@ -470,7 +696,8 @@ const AddItem = ({ onClose, onAdd }) => {
                     </div>
 
 
-                    {/* Low Stock Threshold */}
+                    {/* LOW STOCK THRESHOLD */}
+
                     <div className='mb-6'>
 
                         <label className='
@@ -481,6 +708,7 @@ const AddItem = ({ onClose, onAdd }) => {
                         '>
                             Low Stock Threshold
                         </label>
+
 
                         <input
                             type='number'
@@ -501,6 +729,7 @@ const AddItem = ({ onClose, onAdd }) => {
                             '
                         />
 
+
                         <p className='
                             text-xs
                             text-gray-400
@@ -513,7 +742,23 @@ const AddItem = ({ onClose, onAdd }) => {
                     </div>
 
 
-                    {/* Actions */}
+                    {/* ERROR */}
+
+                    {error && (
+
+                        <p className='
+                            text-xs
+                            text-black
+                            mb-4
+                        '>
+                            {error}
+                        </p>
+
+                    )}
+
+
+                    {/* ACTIONS */}
+
                     <div className='
                         flex
                         flex-col-reverse
@@ -543,8 +788,14 @@ const AddItem = ({ onClose, onAdd }) => {
                             Cancel
                         </button>
 
+
                         <button
                             type='submit'
+                            disabled={
+                                submitting ||
+                                uploadingImage ||
+                                form.categoryId === ''
+                            }
                             className='
                                 bg-black
                                 text-white
@@ -553,9 +804,13 @@ const AddItem = ({ onClose, onAdd }) => {
                                 text-sm
                                 hover:bg-gray-800
                                 transition
+                                disabled:opacity-50
                             '
                         >
-                            Add Item
+                            {submitting
+                                ? 'Adding...'
+                                : 'Add Item'
+                            }
                         </button>
 
                     </div>
@@ -565,6 +820,7 @@ const AddItem = ({ onClose, onAdd }) => {
             </div>
 
         </div>
+
     )
 }
 
