@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { UserPlus, Users as UsersIcon } from 'lucide-react'
+import { UserPlus, Users as UsersIcon, Trash2 } from 'lucide-react'
 
-import { getUsers, createUser } from '../services/api'
+import { getUsers, createUser, deleteUser } from '../services/api'
 import Toast from '../components/Toast'
 
 const Users = () => {
@@ -19,6 +19,10 @@ const Users = () => {
     const [formError, setFormError] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [toast, setToast] = useState(null)
+
+    // delete state
+    const [confirmingId, setConfirmingId] = useState(null)
+    const [deletingId, setDeletingId] = useState(null)
 
     const fetchUsers = async () => {
 
@@ -105,6 +109,40 @@ const Users = () => {
         } finally {
 
             setSubmitting(false)
+        }
+    }
+
+    const handleDelete = async (user) => {
+
+        // safety: never delete a super admin
+        if (user.role === 'super_admin') return
+
+        setDeletingId(user.id)
+
+        try {
+
+            await deleteUser(user.id)
+
+            setUsers((prev) => prev.filter((u) => u.id !== user.id))
+
+            setToast({
+                type: 'success',
+                message: `Account for ${user.name} deleted.`
+            })
+
+        } catch (err) {
+
+            console.error(err)
+
+            setToast({
+                type: 'error',
+                message: err.message || 'Failed to delete account.'
+            })
+
+        } finally {
+
+            setDeletingId(null)
+            setConfirmingId(null)
         }
     }
 
@@ -240,57 +278,156 @@ const Users = () => {
 
                             <>
 
-                                {users.map((user) => (
+                                {users.map((user) => {
 
-                                    <div
-                                        key={user.id}
-                                        className="
-                                            flex
-                                            items-center
-                                            justify-between
-                                            gap-4
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-100
-                                            last:border-b-0
-                                        "
-                                    >
+                                    const isSuperAdmin = user.role === 'super_admin'
+                                    const isConfirming = confirmingId === user.id
+                                    const isDeleting = deletingId === user.id
 
-                                        <div>
+                                    return (
 
-                                            <p className="
-                                                text-sm
-                                                text-gray-900
+                                        <div
+                                            key={user.id}
+                                            className="
+                                                flex
+                                                items-center
+                                                justify-between
+                                                gap-4
+                                                px-5
+                                                py-4
+                                                border-b
+                                                border-gray-100
+                                                last:border-b-0
+                                            "
+                                        >
+
+                                            <div>
+
+                                                <p className="
+                                                    text-sm
+                                                    text-gray-900
+                                                ">
+                                                    {user.name}
+                                                </p>
+
+                                                <p className="
+                                                    text-xs
+                                                    text-gray-500
+                                                    mt-1
+                                                ">
+                                                    @{user.username}
+                                                    {' · '}
+                                                    Joined {formatDate(user.created_at)}
+                                                </p>
+
+                                            </div>
+
+                                            <div className="
+                                                flex
+                                                items-center
+                                                gap-2
+                                                flex-wrap
+                                                justify-end
                                             ">
-                                                {user.name}
-                                            </p>
 
-                                            <p className="
-                                                text-xs
-                                                text-gray-500
-                                                mt-1
-                                            ">
-                                                @{user.username}
-                                                {' · '}
-                                                Joined {formatDate(user.created_at)}
-                                            </p>
+                                                <span className={
+                                                    isSuperAdmin
+                                                        ? 'text-xs px-2.5 py-1 border border-black text-black'
+                                                        : 'text-xs px-2.5 py-1 border border-gray-300 text-gray-600'
+                                                }>
+                                                    {isSuperAdmin
+                                                        ? 'Super Admin'
+                                                        : 'Admin'}
+                                                </span>
+
+                                                {/* DELETE — admins only, never super admin */}
+
+                                                {!isSuperAdmin && (
+
+                                                    isConfirming ? (
+
+                                                        <>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDelete(user)}
+                                                                disabled={isDeleting}
+                                                                className="
+                                                                    text-xs
+                                                                    px-2.5
+                                                                    py-1
+                                                                    bg-red-600
+                                                                    text-white
+                                                                    border
+                                                                    border-red-600
+                                                                    hover:bg-red-700
+                                                                    transition
+                                                                    disabled:opacity-50
+                                                                "
+                                                            >
+                                                                {isDeleting ? 'Deleting...' : 'Confirm delete'}
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setConfirmingId(null)}
+                                                                disabled={isDeleting}
+                                                                className="
+                                                                    text-xs
+                                                                    px-2.5
+                                                                    py-1
+                                                                    border
+                                                                    border-gray-300
+                                                                    text-gray-600
+                                                                    hover:border-black
+                                                                    hover:text-black
+                                                                    transition
+                                                                    disabled:opacity-50
+                                                                "
+                                                            >
+                                                                Cancel
+                                                            </button>
+
+                                                        </>
+
+                                                    ) : (
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setConfirmingId(user.id)}
+                                                            aria-label={`Delete ${user.name}`}
+                                                            className="
+                                                                inline-flex
+                                                                items-center
+                                                                gap-1.5
+                                                                text-xs
+                                                                px-2.5
+                                                                py-1
+                                                                border
+                                                                border-red-600
+                                                                text-red-600
+                                                                hover:bg-red-600
+                                                                hover:text-white
+                                                                transition
+                                                            "
+                                                        >
+                                                            <Trash2
+                                                                size={12}
+                                                                strokeWidth={1.5}
+                                                            />
+                                                            Delete
+                                                        </button>
+
+                                                    )
+
+                                                )}
+
+                                            </div>
 
                                         </div>
 
-                                        <span className={
-                                            user.role === 'super_admin'
-                                                ? 'text-xs px-2.5 py-1 border border-black text-black'
-                                                : 'text-xs px-2.5 py-1 border border-gray-300 text-gray-600'
-                                        }>
-                                            {user.role === 'super_admin'
-                                                ? 'Super Admin'
-                                                : 'Admin'}
-                                        </span>
-
-                                    </div>
-
-                                ))}
+                                    )
+                                })}
 
                                 {users.length === 0 && (
 

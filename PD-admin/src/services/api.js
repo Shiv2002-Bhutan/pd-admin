@@ -151,6 +151,12 @@ export const createUser = (user) =>
         body: JSON.stringify(user)
     })
 
+
+export const deleteUser = (id) =>
+    request(`/api/users/${id}`, {
+        method: 'DELETE'
+    })
+
 // ============================================================
 // IMAGES
 // ============================================================

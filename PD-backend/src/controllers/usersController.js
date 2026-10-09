@@ -53,3 +53,52 @@ export const createUser = async (req, res) => {
         res.status(500).json({ message: 'Failed to create user.' })
     }
 }
+
+export const deleteUser = async (req, res) => {
+
+    const { id } = req.params
+
+    try {
+
+        // Delete only if the target is NOT a super admin (enforced in SQL)
+        const result = await pool.query(
+            `DELETE FROM users
+             WHERE id = $1 AND role <> 'super_admin'
+             RETURNING id`,
+            [id]
+        )
+
+        if (result.rowCount > 0) {
+            return res.json({ message: 'User deleted.' })
+        }
+
+        // Nothing deleted: figure out why
+        const existing = await pool.query(
+            'SELECT role FROM users WHERE id = $1',
+            [id]
+        )
+
+        if (existing.rowCount === 0) {
+            return res.status(404).json({ message: 'User not found.' })
+        }
+
+        return res.status(403).json({ message: 'Super admin accounts cannot be deleted.' })
+
+    } catch (error) {
+
+        // invalid id format (e.g. non-numeric / bad UUID)
+        if (error.code === '22P02') {
+            return res.status(400).json({ message: 'Invalid user id.' })
+        }
+
+        // user is referenced by other tables
+        if (error.code === '23503') {
+            return res.status(409).json({
+                message: 'This user has related records and cannot be deleted.'
+            })
+        }
+
+        console.error(error)
+        res.status(500).json({ message: 'Failed to delete user.' })
+    }
+}
