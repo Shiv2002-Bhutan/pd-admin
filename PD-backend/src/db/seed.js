@@ -34,7 +34,8 @@ const seed = async () => {
         'King Koil',
         'Furniture',
         'Clothing',
-        'Mattresses'
+        'Mattresses',
+        'Rubber Wood'
     ]
 
     for (const name of categories) {

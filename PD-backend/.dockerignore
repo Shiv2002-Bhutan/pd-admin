@@ -1,0 +1,16 @@
+node_modules/
+uploads/
+backups/
+.env
+.env.*
+!.env.example
+.git/
+.github/
+deploy/
+Dockerfile
+.dockerignore
+*.dump
+*.sql.bak
+npm-debug.log*
+coverage/
+.DS_Store

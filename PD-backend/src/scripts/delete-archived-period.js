@@ -32,24 +32,36 @@ const run = async () => {
         const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
         const nextMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-        const result = await client.query(
-            `SELECT * FROM pos_archives
-             WHERE period_start = $1 AND pdf_status = 'created' AND deletion_status = 'pending'`,
-            [periodStart]
-        )
+        // const result = await client.query(
+        //     `SELECT * FROM pos_archives
+        //      WHERE period_start = $1 AND pdf_status = 'created' AND deletion_status = 'pending'`,
+        //     [periodStart]
+        // )
+
+
+
+const result = await client.query(
+    `SELECT * FROM pos_archives
+     WHERE period_start = $1
+       AND pdf_status = 'created'
+       AND deletion_status = 'pending'
+       AND downloaded_at IS NOT NULL`,
+    [periodStart]
+)
+
 
         const archive = result.rows[0]
 
         if (!archive) {
             console.log('No pending archive to verify for this period. Nothing deleted.')
-            process.exit(0)
+            return
         }
 
         const path = `${process.env.ARCHIVE_DIR}/${archive.filename}`
 
         if (!fs.existsSync(path)) {
             console.error('Archive file missing on disk. Aborting — live data NOT deleted.')
-            process.exit(1)
+            return
         }
 
         // //const actualChecksum = await sha256File(path)
@@ -81,13 +93,13 @@ const run = async () => {
         await client.query('COMMIT')
 
         console.log(`Live data for ${archive.period_start} deleted after verification.`)
-        process.exit(0)
+        return
 
     } catch (error) {
 
         await client.query('ROLLBACK').catch(() => {})
         console.error('Deletion aborted:', error)
-        process.exit(1)
+        return
 
     } finally {
 
