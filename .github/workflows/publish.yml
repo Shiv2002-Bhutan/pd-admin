@@ -30,8 +30,8 @@ jobs:
       - name: Build and publish image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
+          context: ./PD-admin
+          file: ./PD-admin/Dockerfile
           push: true
           build-args: |
             VITE_API_URL=/
