@@ -34,7 +34,7 @@ jobs:
           file: ./PD-admin/Dockerfile
           push: true
           build-args: |
-            VITE_API_URL=/
+            VITE_API_URL=
           tags: |
             ghcr.io/shiv2002-bhutan/pd-admin:latest
             ghcr.io/shiv2002-bhutan/pd-admin:sha-${{ github.sha }}
